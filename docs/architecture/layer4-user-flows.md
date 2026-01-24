@@ -38,7 +38,9 @@
 ### F) Employee Profile Export (CV-style)
 1. Admin opens employee record.
 2. Selects **Download Profile** (CV-style summary).
-3. Export includes photo, core identity, role/department, and safe contact fields.
+3. System generates a **print-ready file (PDF)** using a consistent template.
+4. Export includes photo, core identity, role/department, and **approved contact fields**.
+5. Sensitive data (private address, personal phone, internal notes) is excluded.
 
 ---
 
