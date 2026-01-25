@@ -67,6 +67,7 @@
 
 ### E) Password Change
 1. Employee uses Supabase password reset flow.
+2. After success, the user is redirected to login to re-authenticate.
 
 ---
 
