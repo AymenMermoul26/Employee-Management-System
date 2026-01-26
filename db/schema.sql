@@ -1,6 +1,6 @@
 -- Database schema + RLS for Employee Management System
 
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
 -- Enums
 create type public.user_role as enum ('ADMIN', 'EMPLOYEE');
@@ -22,7 +22,7 @@ $$;
 
 -- Departments
 create table if not exists public.departments (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default extensions.gen_random_uuid(),
   name text not null,
   status public.account_status not null default 'ACTIF',
   created_at timestamptz not null default now(),
@@ -35,7 +35,7 @@ for each row execute function public.set_updated_at();
 
 -- Employees
 create table if not exists public.employees (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default extensions.gen_random_uuid(),
   department_id uuid not null references public.departments(id),
   auth_user_id uuid references auth.users(id),
   matricule text not null,
@@ -61,7 +61,7 @@ for each row execute function public.set_updated_at();
 
 -- User profiles (roles + account status)
 create table if not exists public.user_profiles (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default extensions.gen_random_uuid(),
   supabase_user_id uuid not null references auth.users(id) on delete cascade,
   role public.user_role not null,
   statut_compte public.account_status not null default 'ACTIF',
@@ -87,7 +87,7 @@ $$;
 
 -- QR tokens
 create table if not exists public.employee_qr_tokens (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default extensions.gen_random_uuid(),
   employee_id uuid not null references public.employees(id) on delete cascade,
   token_hash text not null,
   statut_token public.token_status not null default 'ACTIVE',
@@ -101,7 +101,7 @@ create index employee_qr_tokens_employee_id_idx on public.employee_qr_tokens(emp
 
 -- Modification requests
 create table if not exists public.employee_modification_requests (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default extensions.gen_random_uuid(),
   employee_id uuid not null references public.employees(id) on delete cascade,
   contenu_demande jsonb not null,
   statut_demande public.request_status not null default 'PENDING',
@@ -138,7 +138,7 @@ as $$
   from public.employee_qr_tokens t
   join public.employees e on e.id = t.employee_id
   join public.departments d on d.id = e.department_id
-  where t.token_hash = encode(digest(convert_to(token, 'utf8'), 'sha256'), 'hex')
+  where t.token_hash = encode(extensions.digest(convert_to(token, 'utf8'), 'sha256'), 'hex')
     and t.statut_token = 'ACTIVE'
     and (t.expires_at is null or t.expires_at > now())
     and t.revoked_at is null
