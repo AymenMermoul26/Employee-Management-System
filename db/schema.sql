@@ -138,7 +138,7 @@ as $$
   from public.employee_qr_tokens t
   join public.employees e on e.id = t.employee_id
   join public.departments d on d.id = e.department_id
-  where t.token_hash = encode(digest(token, 'sha256'), 'hex')
+  where t.token_hash = encode(digest(convert_to(token, 'utf8'), 'sha256'), 'hex')
     and t.statut_token = 'ACTIVE'
     and (t.expires_at is null or t.expires_at > now())
     and t.revoked_at is null
