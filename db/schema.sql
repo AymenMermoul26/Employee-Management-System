@@ -162,12 +162,24 @@ for select
 to authenticated
 using (true);
 
-create policy departments_admin_write
+create policy departments_admin_insert
 on public.departments
-for insert, update, delete
+for insert
+to authenticated
+with check (public.is_admin());
+
+create policy departments_admin_update
+on public.departments
+for update
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
+
+create policy departments_admin_delete
+on public.departments
+for delete
+to authenticated
+using (public.is_admin());
 
 -- Employees policies
 create policy employees_read_admin
@@ -182,12 +194,24 @@ for select
 to authenticated
 using (auth.uid() = auth_user_id);
 
-create policy employees_admin_write
+create policy employees_admin_insert
 on public.employees
-for insert, update, delete
+for insert
+to authenticated
+with check (public.is_admin());
+
+create policy employees_admin_update
+on public.employees
+for update
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
+
+create policy employees_admin_delete
+on public.employees
+for delete
+to authenticated
+using (public.is_admin());
 
 -- User profiles policies
 create policy user_profiles_read_self
@@ -196,12 +220,24 @@ for select
 to authenticated
 using (supabase_user_id = auth.uid());
 
-create policy user_profiles_admin_write
+create policy user_profiles_admin_insert
 on public.user_profiles
-for insert, update, delete
+for insert
+to authenticated
+with check (public.is_admin());
+
+create policy user_profiles_admin_update
+on public.user_profiles
+for update
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
+
+create policy user_profiles_admin_delete
+on public.user_profiles
+for delete
+to authenticated
+using (public.is_admin());
 
 -- QR token policies
 create policy qr_tokens_read_admin
@@ -223,12 +259,24 @@ using (
   )
 );
 
-create policy qr_tokens_admin_write
+create policy qr_tokens_admin_insert
 on public.employee_qr_tokens
-for insert, update, delete
+for insert
+to authenticated
+with check (public.is_admin());
+
+create policy qr_tokens_admin_update
+on public.employee_qr_tokens
+for update
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
+
+create policy qr_tokens_admin_delete
+on public.employee_qr_tokens
+for delete
+to authenticated
+using (public.is_admin());
 
 -- Modification request policies
 create policy requests_read_admin
@@ -263,9 +311,15 @@ with check (
   )
 );
 
-create policy requests_admin_write
+create policy requests_admin_update
 on public.employee_modification_requests
-for update, delete
+for update
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
+
+create policy requests_admin_delete
+on public.employee_modification_requests
+for delete
+to authenticated
+using (public.is_admin());
