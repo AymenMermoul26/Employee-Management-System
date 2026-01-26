@@ -20,22 +20,6 @@ begin
 end;
 $$;
 
--- Helper: admin check
-create or replace function public.is_admin()
-returns boolean
-language sql
-security definer
-set search_path = public, auth
-as $$
-  select exists (
-    select 1
-    from public.user_profiles
-    where supabase_user_id = auth.uid()
-      and role = 'ADMIN'
-      and statut_compte = 'ACTIF'
-  );
-$$;
-
 -- Departments
 create table if not exists public.departments (
   id uuid primary key default gen_random_uuid(),
@@ -84,6 +68,22 @@ create table if not exists public.user_profiles (
   created_at timestamptz not null default now(),
   unique (supabase_user_id)
 );
+
+-- Helper: admin check
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public, auth
+as $$
+  select exists (
+    select 1
+    from public.user_profiles
+    where supabase_user_id = auth.uid()
+      and role = 'ADMIN'
+      and statut_compte = 'ACTIF'
+  );
+$$;
 
 -- QR tokens
 create table if not exists public.employee_qr_tokens (
