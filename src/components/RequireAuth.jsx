@@ -1,8 +1,10 @@
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../auth/AuthProvider.jsx';
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../auth/AuthProvider.jsx";
 
 export default function RequireAuth() {
-  const { isAuthenticated } = useAuth();
+  const { loading, isAuthenticated } = useAuth();
+
+  if (loading) return null; // later: add spinner
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
