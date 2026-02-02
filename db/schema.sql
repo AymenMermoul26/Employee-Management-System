@@ -1,17 +1,28 @@
 -- Database schema + RLS for Employee Management System
+-- Clean version (conflicts resolved)
 
-<<<<<<< ours
-create extension if not exists pgcrypto;
-=======
 create extension if not exists pgcrypto with schema extensions;
->>>>>>> theirs
 
 -- Enums
-create type public.user_role as enum ('ADMIN', 'EMPLOYEE');
-create type public.account_status as enum ('ACTIF', 'DESACTIVE');
-create type public.employee_status as enum ('ACTIF', 'DESACTIVE');
-create type public.token_status as enum ('ACTIVE', 'REVOKED');
-create type public.request_status as enum ('PENDING', 'APPROVED', 'REJECTED');
+do $$ begin
+  create type public.user_role as enum ('ADMIN', 'EMPLOYEE');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.account_status as enum ('ACTIF', 'DESACTIVE');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.employee_status as enum ('ACTIF', 'DESACTIVE');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.token_status as enum ('ACTIVE', 'REVOKED');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.request_status as enum ('PENDING', 'APPROVED', 'REJECTED');
+exception when duplicate_object then null; end $$;
 
 -- Helper: updated_at trigger
 create or replace function public.set_updated_at()
@@ -26,28 +37,21 @@ $$;
 
 -- Departments
 create table if not exists public.departments (
-<<<<<<< ours
-  id uuid primary key default gen_random_uuid(),
-=======
   id uuid primary key default extensions.gen_random_uuid(),
->>>>>>> theirs
   name text not null,
   status public.account_status not null default 'ACTIF',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+drop trigger if exists departments_set_updated_at on public.departments;
 create trigger departments_set_updated_at
 before update on public.departments
 for each row execute function public.set_updated_at();
 
 -- Employees
 create table if not exists public.employees (
-<<<<<<< ours
-  id uuid primary key default gen_random_uuid(),
-=======
   id uuid primary key default extensions.gen_random_uuid(),
->>>>>>> theirs
   department_id uuid not null references public.departments(id),
   auth_user_id uuid references auth.users(id),
   matricule text not null,
@@ -63,21 +67,18 @@ create table if not exists public.employees (
   unique (matricule)
 );
 
-create index employees_department_id_idx on public.employees(department_id);
-create index employees_status_idx on public.employees(statut_employe);
-create index employees_name_idx on public.employees(nom, prenom);
+create index if not exists employees_department_id_idx on public.employees(department_id);
+create index if not exists employees_status_idx on public.employees(statut_employe);
+create index if not exists employees_name_idx on public.employees(nom, prenom);
 
+drop trigger if exists employees_set_updated_at on public.employees;
 create trigger employees_set_updated_at
 before update on public.employees
 for each row execute function public.set_updated_at();
 
 -- User profiles (roles + account status)
 create table if not exists public.user_profiles (
-<<<<<<< ours
-  id uuid primary key default gen_random_uuid(),
-=======
   id uuid primary key default extensions.gen_random_uuid(),
->>>>>>> theirs
   supabase_user_id uuid not null references auth.users(id) on delete cascade,
   role public.user_role not null,
   statut_compte public.account_status not null default 'ACTIF',
@@ -103,11 +104,7 @@ $$;
 
 -- QR tokens
 create table if not exists public.employee_qr_tokens (
-<<<<<<< ours
-  id uuid primary key default gen_random_uuid(),
-=======
   id uuid primary key default extensions.gen_random_uuid(),
->>>>>>> theirs
   employee_id uuid not null references public.employees(id) on delete cascade,
   token_hash text not null,
   statut_token public.token_status not null default 'ACTIVE',
@@ -117,15 +114,12 @@ create table if not exists public.employee_qr_tokens (
   unique (token_hash)
 );
 
-create index employee_qr_tokens_employee_id_idx on public.employee_qr_tokens(employee_id);
+create index if not exists employee_qr_tokens_employee_id_idx
+on public.employee_qr_tokens(employee_id);
 
 -- Modification requests
 create table if not exists public.employee_modification_requests (
-<<<<<<< ours
-  id uuid primary key default gen_random_uuid(),
-=======
   id uuid primary key default extensions.gen_random_uuid(),
->>>>>>> theirs
   employee_id uuid not null references public.employees(id) on delete cascade,
   contenu_demande jsonb not null,
   statut_demande public.request_status not null default 'PENDING',
@@ -135,8 +129,10 @@ create table if not exists public.employee_modification_requests (
   decision_reason text
 );
 
-create index employee_modification_requests_employee_id_idx on public.employee_modification_requests(employee_id);
-create index employee_modification_requests_status_idx on public.employee_modification_requests(statut_demande);
+create index if not exists employee_modification_requests_employee_id_idx
+on public.employee_modification_requests(employee_id);
+create index if not exists employee_modification_requests_status_idx
+on public.employee_modification_requests(statut_demande);
 
 -- Public-safe profile accessor (token hashed with sha256)
 create or replace function public.get_public_profile(token text)
@@ -162,11 +158,10 @@ as $$
   from public.employee_qr_tokens t
   join public.employees e on e.id = t.employee_id
   join public.departments d on d.id = e.department_id
-<<<<<<< ours
-  where t.token_hash = encode(digest(token, 'sha256'), 'hex')
-=======
-  where t.token_hash = encode(extensions.digest(convert_to(token, 'utf8'), 'sha256'), 'hex')
->>>>>>> theirs
+  where t.token_hash = encode(
+  extensions.digest(convert_to(token, 'utf8'), 'sha256'::text),
+  'hex'
+)
     and t.statut_token = 'ACTIVE'
     and (t.expires_at is null or t.expires_at > now())
     and t.revoked_at is null
@@ -184,18 +179,21 @@ alter table public.employee_qr_tokens enable row level security;
 alter table public.employee_modification_requests enable row level security;
 
 -- Departments policies
+drop policy if exists departments_read_authenticated on public.departments;
 create policy departments_read_authenticated
 on public.departments
 for select
 to authenticated
 using (true);
 
+drop policy if exists departments_admin_insert on public.departments;
 create policy departments_admin_insert
 on public.departments
 for insert
 to authenticated
 with check (public.is_admin());
 
+drop policy if exists departments_admin_update on public.departments;
 create policy departments_admin_update
 on public.departments
 for update
@@ -203,6 +201,7 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+drop policy if exists departments_admin_delete on public.departments;
 create policy departments_admin_delete
 on public.departments
 for delete
@@ -210,24 +209,28 @@ to authenticated
 using (public.is_admin());
 
 -- Employees policies
+drop policy if exists employees_read_admin on public.employees;
 create policy employees_read_admin
 on public.employees
 for select
 to authenticated
 using (public.is_admin());
 
+drop policy if exists employees_read_self on public.employees;
 create policy employees_read_self
 on public.employees
 for select
 to authenticated
 using (auth.uid() = auth_user_id);
 
+drop policy if exists employees_admin_insert on public.employees;
 create policy employees_admin_insert
 on public.employees
 for insert
 to authenticated
 with check (public.is_admin());
 
+drop policy if exists employees_admin_update on public.employees;
 create policy employees_admin_update
 on public.employees
 for update
@@ -235,6 +238,7 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+drop policy if exists employees_admin_delete on public.employees;
 create policy employees_admin_delete
 on public.employees
 for delete
@@ -242,18 +246,21 @@ to authenticated
 using (public.is_admin());
 
 -- User profiles policies
+drop policy if exists user_profiles_read_self on public.user_profiles;
 create policy user_profiles_read_self
 on public.user_profiles
 for select
 to authenticated
 using (supabase_user_id = auth.uid());
 
+drop policy if exists user_profiles_admin_insert on public.user_profiles;
 create policy user_profiles_admin_insert
 on public.user_profiles
 for insert
 to authenticated
 with check (public.is_admin());
 
+drop policy if exists user_profiles_admin_update on public.user_profiles;
 create policy user_profiles_admin_update
 on public.user_profiles
 for update
@@ -261,6 +268,7 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+drop policy if exists user_profiles_admin_delete on public.user_profiles;
 create policy user_profiles_admin_delete
 on public.user_profiles
 for delete
@@ -268,12 +276,14 @@ to authenticated
 using (public.is_admin());
 
 -- QR token policies
+drop policy if exists qr_tokens_read_admin on public.employee_qr_tokens;
 create policy qr_tokens_read_admin
 on public.employee_qr_tokens
 for select
 to authenticated
 using (public.is_admin());
 
+drop policy if exists qr_tokens_read_self on public.employee_qr_tokens;
 create policy qr_tokens_read_self
 on public.employee_qr_tokens
 for select
@@ -287,12 +297,14 @@ using (
   )
 );
 
+drop policy if exists qr_tokens_admin_insert on public.employee_qr_tokens;
 create policy qr_tokens_admin_insert
 on public.employee_qr_tokens
 for insert
 to authenticated
 with check (public.is_admin());
 
+drop policy if exists qr_tokens_admin_update on public.employee_qr_tokens;
 create policy qr_tokens_admin_update
 on public.employee_qr_tokens
 for update
@@ -300,6 +312,7 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+drop policy if exists qr_tokens_admin_delete on public.employee_qr_tokens;
 create policy qr_tokens_admin_delete
 on public.employee_qr_tokens
 for delete
@@ -307,12 +320,14 @@ to authenticated
 using (public.is_admin());
 
 -- Modification request policies
+drop policy if exists requests_read_admin on public.employee_modification_requests;
 create policy requests_read_admin
 on public.employee_modification_requests
 for select
 to authenticated
 using (public.is_admin());
 
+drop policy if exists requests_read_self on public.employee_modification_requests;
 create policy requests_read_self
 on public.employee_modification_requests
 for select
@@ -326,6 +341,7 @@ using (
   )
 );
 
+drop policy if exists requests_create_self on public.employee_modification_requests;
 create policy requests_create_self
 on public.employee_modification_requests
 for insert
@@ -339,6 +355,7 @@ with check (
   )
 );
 
+drop policy if exists requests_admin_update on public.employee_modification_requests;
 create policy requests_admin_update
 on public.employee_modification_requests
 for update
@@ -346,6 +363,7 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+drop policy if exists requests_admin_delete on public.employee_modification_requests;
 create policy requests_admin_delete
 on public.employee_modification_requests
 for delete
