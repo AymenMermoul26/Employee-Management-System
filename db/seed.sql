@@ -1,12 +1,13 @@
--- Seed data for Employee Management System
--- Replace the placeholder UUIDs with real values from your Supabase Auth users.
+-- Seed data for Employee Management System (idempotent)
+-- Replace the UUID placeholders with real Supabase Auth user IDs.
 
--- Departments
+-- Departments (avoid duplicates if rerun)
 insert into public.departments (name, status)
 values
   ('Engineering', 'ACTIF'),
   ('Human Resources', 'ACTIF'),
-  ('Finance', 'ACTIF');
+  ('Finance', 'ACTIF')
+on conflict (name) do nothing;
 
 -- Optional: create an employee without an auth account yet
 insert into public.employees (
@@ -25,22 +26,30 @@ select
   'Doe',
   'Jane',
   'Software Engineer',
-  '+212600000001',
+  '+000000000001',
   'jane.doe@company.tld',
   'ACTIF'
 from public.departments d
-where d.name = 'Engineering';
+where d.name = 'Engineering'
+on conflict (matricule) do nothing;
 
--- Link an existing Supabase Auth user to the admin profile
--- 1) Create the user in Supabase Auth
--- 2) Copy their UUID and paste it below
+-- Admin profile (use a real UUID from Supabase Auth)
 insert into public.user_profiles (supabase_user_id, role, statut_compte)
 values
-  ('00000000-0000-0000-0000-000000000000', 'ADMIN', 'ACTIF');
+  ('00000000-0000-0000-0000-000000000001', 'ADMIN', 'ACTIF')
+on conflict (supabase_user_id) do update
+set role = excluded.role,
+    statut_compte = excluded.statut_compte;
 
--- Optional: link an existing Supabase Auth user to an employee record
--- 1) Create the user in Supabase Auth
--- 2) Copy their UUID and paste it below
+-- Optional: employee user profile (separate UUID from admin)
+insert into public.user_profiles (supabase_user_id, role, statut_compte)
+values
+  ('00000000-0000-0000-0000-000000000002', 'EMPLOYEE', 'ACTIF')
+on conflict (supabase_user_id) do update
+set role = excluded.role,
+    statut_compte = excluded.statut_compte;
+
+-- Link employee auth user to employee record
 update public.employees
-set auth_user_id = '00000000-0000-0000-0000-000000000000'
+set auth_user_id = '00000000-0000-0000-0000-000000000002'
 where matricule = 'EMP-001';
