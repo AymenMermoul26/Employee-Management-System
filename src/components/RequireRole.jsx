@@ -2,9 +2,17 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
 
 export default function RequireRole({ allowedRoles }) {
-  const { loading, isAuthenticated, role } = useAuth();
+  const { loading, hydrated, profileReady, isAuthenticated, role } = useAuth();
 
-  if (loading) return null;
+  const waiting = loading || !hydrated || !profileReady;
+
+  if (waiting) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500">
+        Chargement...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

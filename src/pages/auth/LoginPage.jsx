@@ -6,7 +6,16 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { loading, isAuthenticated, role, accountStatus, authUser } = useAuth();
+  const {
+    loading,
+    hydrated,
+    profileReady,
+    isAuthenticated,
+    role,
+    accountStatus,
+    authUser,
+    signOut,
+  } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,13 +24,15 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !hydrated || !profileReady) return;
 
-    // Logged in at Supabase level but missing role/profile
+    // Logged in at Supabase level but missing role/profile after hydration
     if (authUser && !role) {
       setErrorMsg(
         "Connexion réussie, mais votre compte n’est pas encore configuré. Contactez l’administrateur.",
       );
+      // Clear the stale session so next attempt starts fresh
+      signOut();
       return;
     }
 
@@ -34,7 +45,17 @@ export default function LoginPage() {
       if (role === "ADMIN") navigate("/admin", { replace: true });
       else if (role === "EMPLOYEE") navigate("/employee", { replace: true });
     }
-  }, [loading, authUser, isAuthenticated, role, accountStatus, navigate]);
+  }, [
+    loading,
+    hydrated,
+    profileReady,
+    authUser,
+    isAuthenticated,
+    role,
+    accountStatus,
+    navigate,
+    signOut,
+  ]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -62,6 +83,9 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
+      {loading && !hydrated ? (
+        <div className="text-sm text-slate-500">Chargement...</div>
+      ) : null}
       <h2 className="text-xl font-semibold text-slate-800">Sign in</h2>
       <p className="mt-2 text-sm text-slate-500">
         Connectez-vous pour accéder à votre espace.

@@ -14,14 +14,56 @@ import ProfilePage from '../pages/employee/ProfilePage.jsx';
 import PublicPreviewPage from '../pages/employee/PublicPreviewPage.jsx';
 import EmployeeRequestsPage from '../pages/employee/EmployeeRequestsPage.jsx';
 import PublicProfilePage from '../pages/public/PublicProfilePage.jsx';
+import { useAuth } from '../auth/AuthProvider.jsx';
+
+function RedirectIfAuth({ children }) {
+  const { isAuthenticated, role } = useAuth();
+
+  if (isAuthenticated) {
+    const target = role === "ADMIN" ? "/admin" : "/employee";
+    return <Navigate to={target} replace />;
+  }
+
+  return children;
+}
+
+function NotFoundRedirect() {
+  const { isAuthenticated, role } = useAuth();
+  if (isAuthenticated) {
+    const target = role === "ADMIN" ? "/admin" : "/employee";
+    return <Navigate to={target} replace />;
+  }
+  return <Navigate to="/login" replace />;
+}
 
 export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route
+        path="/login"
+        element={
+          <RedirectIfAuth>
+            <LoginPage />
+          </RedirectIfAuth>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <RedirectIfAuth>
+            <ForgotPasswordPage />
+          </RedirectIfAuth>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <RedirectIfAuth>
+            <ResetPasswordPage />
+          </RedirectIfAuth>
+        }
+      />
       <Route path="/public/:token" element={<PublicProfilePage />} />
 
       <Route element={<RequireAuth />}>
@@ -41,7 +83,7 @@ export default function AppRoutes() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<NotFoundRedirect />} />
     </Routes>
   );
 }
