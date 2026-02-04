@@ -26,25 +26,42 @@ export default function LoginPage() {
   useEffect(() => {
     if (loading || !hydrated || !profileReady) return;
 
-    // Logged in at Supabase level but missing role/profile after hydration
-    if (authUser && !role) {
-      setErrorMsg(
-        "Connexion réussie, mais votre compte n’est pas encore configuré. Contactez l’administrateur.",
-      );
-      // Clear the stale session so next attempt starts fresh
-      signOut();
-      return;
-    }
+    let cancelled = false;
 
-    if (isAuthenticated) {
-      if (accountStatus === "DESACTIVE") {
-        setErrorMsg("Votre compte est désactivé. Contactez l’administrateur.");
+    (async () => {
+      // Logged in at Supabase level but missing role/profile after hydration
+      if (authUser && !role) {
+        setErrorMsg(
+          "Connexion réussie, mais votre compte n’est pas encore configuré. Contactez l’administrateur.",
+        );
+
+        // Prevent the user from interacting while we cleanly terminate the session
+        setSubmitting(true);
+
+        try {
+          await signOut(); // <-- IMPORTANT: await it
+        } finally {
+          if (!cancelled) setSubmitting(false);
+        }
         return;
       }
 
-      if (role === "ADMIN") navigate("/admin", { replace: true });
-      else if (role === "EMPLOYEE") navigate("/employee", { replace: true });
-    }
+      if (isAuthenticated) {
+        if (accountStatus === "DESACTIVE") {
+          setErrorMsg(
+            "Votre compte est désactivé. Contactez l’administrateur.",
+          );
+          return;
+        }
+
+        if (role === "ADMIN") navigate("/admin", { replace: true });
+        else if (role === "EMPLOYEE") navigate("/employee", { replace: true });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     loading,
     hydrated,
@@ -83,9 +100,10 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      {loading && !hydrated ? (
+      {loading || !hydrated || !profileReady ? (
         <div className="text-sm text-slate-500">Chargement...</div>
       ) : null}
+
       <h2 className="text-xl font-semibold text-slate-800">Sign in</h2>
       <p className="mt-2 text-sm text-slate-500">
         Connectez-vous pour accéder à votre espace.
