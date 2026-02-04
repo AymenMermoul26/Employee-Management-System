@@ -18,8 +18,15 @@ export default function RequireRole({ allowedRoles }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!role || !allowedRoles.includes(role)) {
+  // Defensive: AuthProvider normally guarantees role when isAuthenticated is true.
+  if (!role) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Authenticated but wrong role => send them to their correct home.
+  if (!allowedRoles.includes(role)) {
+    const fallback = role === "ADMIN" ? "/admin" : "/employee";
+    return <Navigate to={fallback} replace />;
   }
 
   return <Outlet />;
